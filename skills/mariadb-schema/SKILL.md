@@ -1,105 +1,81 @@
 ---
 name: mariadb-schema
-description: >
-  Usa esta skill siempre que necesites inspeccionar el esquema de una base de datos MariaDB/MySQL
-  para ayudar a crear módulos, agentes, o cualquier código que interactúe con esa base de datos.
-  Triggers: cuando el usuario mencione "esquema", "tablas", "relaciones", "columnas", "base de datos",
-  "mariadb", "mysql", "módulo", "modelo", o pida describir estructuras de datos. Esta skill extrae
-  credenciales automáticamente del archivo .env.skill.mariadb en el directorio principal del proyecto.
-  NUNCA ejecuta queries de escritura — solo lectura del esquema.
+description: "Inspeccion rapida y de solo lectura del esquema MariaDB/MySQL con el CLI mariadb. Usar cuando necesites tablas, columnas, describe, foreign keys, relaciones, SHOW CREATE TABLE o contexto de base de datos para crear modulos, tipos o agentes con mayor precision. Resuelve credenciales desde el .env raiz del proyecto con fallback determinista."
+argument-hint: "Tabla objetivo o consulta de introspeccion. Solo permite SHOW, DESCRIBE y SELECT sobre information_schema."
 ---
 
-# MariaDB Schema Skill (Read-Only)
+# MariaDB Schema
 
-Esta skill permite inspeccionar el esquema de una base de datos MariaDB/MySQL de forma segura,
-extrayendo solo la información necesaria para que los agentes sean más precisos al generar código.
+Usa esta skill cuando necesites entender una base MariaDB/MySQL antes de crear modulos, acciones, tipos o consultas. Esta skill esta optimizada para:
 
----
+- Encontrar credenciales rapido desde la raiz del repo sin `find`
+- Ejecutar solo introspeccion de esquema
+- Pedir la menor cantidad posible de informacion
 
-## 1. Cargar credenciales
+## Flujo
 
-Busca el archivo `.env.skill.mariadb` en el directorio de trabajo actual o en el directorio raíz del proyecto:
+1. Ejecuta la consulta mas pequena posible con [query.sh](./scripts/query.sh).
+2. Empieza por `SHOW TABLES` o `DESCRIBE tabla`.
+3. Si necesitas relaciones, consulta `information_schema.KEY_COLUMN_USAGE`.
+4. Usa `SHOW CREATE TABLE` solo cuando hagan falta constraints o detalles finos.
 
-```bash
-# Buscar el archivo de credenciales
-find . -maxdepth 3 -name ".env.skill.mariadb" 2>/dev/null | head -1
-```
+## Credenciales
 
-El archivo debe estar siempre en el **directorio de trabajo actual**. Tiene este formato:
+La resolucion de credenciales la hace [resolve_credentials.py](./scripts/resolve_credentials.py). El flujo es determinista y rapido:
 
-```env
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_USER=readonly_user
-DB_PASSWORD=secret
-DB_NAME=mi_base_de_datos
-```
+1. Busca la raiz del proyecto subiendo desde el directorio actual hasta encontrar `.git` o `package.json`.
+2. Lee solo `mariadb-schema.env` en esa raiz.
+3. Exige un unico juego de credenciales con estas variables:
+  - `DB_HOST`
+  - `DB_PORT`
+  - `DB_USER`
+  - `DB_PASSWORD`
+  - `DB_NAME`
 
-Carga las variables con el script helper:
+La skill no usa `.env`, `.env.local` ni perfiles alternos.
 
-```bash
-SKILL_DIR="$(find \
-  ./.claude/skills \
-  ./.github/skills \
-  "$HOME/.claude/skills" \
-  "$HOME/.copilot/skills" \
-  "$HOME/.agents/skills" \
-  -maxdepth 2 -type d -name mariadb-schema 2>/dev/null | head -1)"
+## Uso
 
-python3 "$SKILL_DIR/scripts/load_env.py"
-```
-
-O manualmente en bash:
-```bash
-export $(grep -v '^#' .env.skill.mariadb | xargs)
-```
-
-Si necesitas revisar el comportamiento exacto del helper, consulta [load_env.py](./scripts/load_env.py).
-
----
-
-## 2. Ejecutar queries de esquema
-
-Usa siempre el script `query.sh` para garantizar modo lectura. **NUNCA ejecutes INSERT, UPDATE, DELETE, DROP, ALTER ni DDL.**
+Consulta simple:
 
 ```bash
-SKILL_DIR="$(find \
-  ./.claude/skills \
-  ./.github/skills \
-  "$HOME/.claude/skills" \
-  "$HOME/.copilot/skills" \
-  "$HOME/.agents/skills" \
-  -maxdepth 2 -type d -name mariadb-schema 2>/dev/null | head -1)"
-
-bash "$SKILL_DIR/scripts/query.sh" "$DB_HOST" "$DB_PORT" "$DB_USER" "$DB_PASSWORD" "$DB_NAME" "SQL_AQUI"
+bash ./.agents/skills/mariadb-schema/scripts/query.sh "SHOW TABLES"
 ```
 
-Si el skill esta instalado en otra ubicacion compatible, el bloque anterior buscara primero en el proyecto y luego en rutas globales comunes. Para inspeccionar o reproducir la logica, consulta [query.sh](./scripts/query.sh).
+Cambiar la base sin tocar el `.env`:
 
----
+```bash
+bash ./.agents/skills/mariadb-schema/scripts/query.sh --database otra_base "SHOW TABLES"
+```
 
-## 3. Queries de referencia rápida
+## Consultas minimas recomendadas
 
-### Listar todas las tablas
+Listar tablas:
+
 ```sql
 SHOW TABLES;
 ```
 
-### Describir una tabla (columnas, tipos, nulls, defaults, keys)
+Describir una tabla:
+
 ```sql
 DESCRIBE nombre_tabla;
 ```
-O más detallado:
+
+Columnas con mas detalle:
+
 ```sql
 SHOW FULL COLUMNS FROM nombre_tabla;
 ```
 
-### Ver índices de una tabla
+Indices:
+
 ```sql
 SHOW INDEX FROM nombre_tabla;
 ```
 
-### Ver relaciones (foreign keys) de una tabla
+Relaciones de una tabla:
+
 ```sql
 SELECT
   COLUMN_NAME,
@@ -112,7 +88,8 @@ WHERE TABLE_SCHEMA = DATABASE()
   AND REFERENCED_TABLE_NAME IS NOT NULL;
 ```
 
-### Ver TODAS las relaciones de la base de datos
+Relaciones de toda la base:
+
 ```sql
 SELECT
   TABLE_NAME,
@@ -126,49 +103,24 @@ WHERE TABLE_SCHEMA = DATABASE()
 ORDER BY TABLE_NAME, COLUMN_NAME;
 ```
 
-### Ver la definición completa de una tabla (CREATE TABLE)
+DDL de una tabla:
+
 ```sql
 SHOW CREATE TABLE nombre_tabla;
 ```
 
-### Ver resumen de todas las tablas con filas y engine
-```sql
-SELECT
-  TABLE_NAME,
-  ENGINE,
-  TABLE_ROWS,
-  TABLE_COMMENT
-FROM information_schema.TABLES
-WHERE TABLE_SCHEMA = DATABASE()
-ORDER BY TABLE_NAME;
-```
+## Restricciones
 
-### Buscar columnas por nombre en toda la BD
-```sql
-SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY
-FROM information_schema.COLUMNS
-WHERE TABLE_SCHEMA = DATABASE()
-  AND COLUMN_NAME LIKE '%termino_busqueda%'
-ORDER BY TABLE_NAME;
-```
+- Permite `SHOW`, `DESCRIBE`, `DESC`
+- Permite `SELECT` solo si consulta `information_schema`
+- Bloquea multiples sentencias en una sola ejecucion
+- No usar para `INSERT`, `UPDATE`, `DELETE`, `ALTER`, `DROP`, `CREATE`, `CALL` ni consultas de datos de negocio
 
----
+## Criterio de cierre
 
-## 4. Flujo recomendado para ayudar a crear un módulo
+La inspeccion esta completa cuando ya tienes:
 
-1. **Listar tablas** → entender el dominio
-2. **DESCRIBE** de las tablas relevantes → columnas y tipos
-3. **Foreign keys** → relaciones entre entidades
-4. **SHOW CREATE TABLE** solo si se necesitan detalles de charset, engines o constraints especiales
-
-Con esa información, genera el código del módulo con tipos precisos, relaciones correctas y nombres exactos de columnas.
-
----
-
-## 5. Restricciones de seguridad
-
-- ✅ SELECT en `information_schema`
-- ✅ SHOW TABLES, SHOW COLUMNS, SHOW INDEX, SHOW CREATE TABLE, DESCRIBE
-- ✅ SELECT en tablas de datos solo para inspeccionar una fila de ejemplo: `SELECT * FROM t LIMIT 1`
-- ❌ INSERT, UPDATE, DELETE, DROP, TRUNCATE, ALTER, CREATE, GRANT, REVOKE
-- ❌ Queries sin LIMIT en tablas de datos (solo en information_schema está permitido)
+1. Tablas involucradas
+2. Columnas y tipos relevantes
+3. Llaves e indices necesarios
+4. Relaciones exactas para modelar el modulo
