@@ -1,6 +1,6 @@
 # Agent Skills
 
-Colección de skills para agentes de IA (Claude Code, GitHub Copilot, etc.) que permiten interactuar con herramientas externas de forma segura y controlada.
+Coleccion de skills para agentes de IA (Claude Code, GitHub Copilot, etc.) que permiten interactuar con herramientas externas de forma segura y controlada.
 
 ---
 
@@ -14,16 +14,42 @@ Colección de skills para agentes de IA (Claude Code, GitHub Copilot, etc.) que 
 
 ## 🚀 Instalación
 
-### Usando skills-cli
+### Probar el repo localmente
 
-La forma más fácil de instalar skills es con `skills-cli`:
+Antes de publicarlo en GitHub, valida que el CLI detecta tus skills desde el filesystem:
 
 ```bash
-# Instalar una skill específica
-skills-cli install --repo https://github.com/tu-usuario/agent-skills --skills mariadb-schema
+# Desde la raiz de este repo
+npx skills add . --list
+
+# Instalar solo esta skill desde el repo local
+npx skills add . --skill mariadb-schema
 ```
 
-### Instalación manual
+### Instalar desde GitHub
+
+Para instalar desde una URL de GitHub, el repositorio debe existir y ser publico. Si GitHub devuelve `404` para:
+
+```text
+https://github.com/<usuario>/<repo>/archive/refs/heads/main.zip
+```
+
+el CLI no podra descargarlo. En ese caso:
+
+- publica el repositorio, o
+- usa la instalacion local mientras el repo siga privado
+
+Cuando el repo ya este publicado, el flujo recomendado es:
+
+```bash
+# Instalar una skill especifica desde GitHub
+npx skills add chenux/agent-skills --skill mariadb-schema
+
+# Ver skills detectadas sin instalar
+npx skills add chenux/agent-skills --list
+```
+
+### Instalacion manual
 
 #### Global (para todos los proyectos)
 
@@ -55,9 +81,9 @@ skills/
 
 ---
 
-## 🔧 Configuración
+## 🔧 Configuracion
 
-Cada skill puede requerir configuración específica. Consulta el `README.md` de cada skill para más detalles.
+Cada skill puede requerir configuracion especifica. Consulta el `README.md` de cada skill para mas detalles.
 
 ### Ejemplo: mariadb-schema
 
@@ -73,6 +99,16 @@ DB_NAME=nombre_de_tu_base
 
 ---
 
+## 📝 Requisitos para que el repo sea instalable
+
+Para que `skills add` pueda descubrir e instalar skills desde este repositorio:
+
+1. El repositorio debe ser publico si lo vas a instalar por URL de GitHub.
+2. Las skills deben vivir en una ubicacion reconocida por el CLI. `skills/` es valida.
+3. Cada skill debe tener un `SKILL.md` con frontmatter YAML valido.
+4. El valor `name` del frontmatter debe coincidir con el nombre de la carpeta.
+5. Los recursos del skill deben referenciarse con rutas relativas desde `SKILL.md`.
+
 ## 📝 Creando nuevas skills
 
 Para agregar una nueva skill:
@@ -81,6 +117,7 @@ Para agregar una nueva skill:
 2. Agrega un archivo `SKILL.md` con el frontmatter YAML requerido
 3. Agrega un `README.md` con documentación de uso
 4. Incluye scripts helper en `scripts/` si es necesario
+5. Prueba el descubrimiento con `npx skills add . --list`
 
 ---
 

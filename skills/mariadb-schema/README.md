@@ -1,7 +1,7 @@
 # mariadb-schema skill
 
 Skill de solo lectura para inspeccionar el esquema de una base de datos MariaDB/MySQL.
-Diseñada para que los agentes de Claude sean más precisos al generar módulos, modelos y código que interactúe con tu base de datos.
+Disenada para que los agentes sean mas precisos al generar modulos, modelos y codigo que interactue con tu base de datos.
 
 ---
 
@@ -16,11 +16,16 @@ Diseñada para que los agentes de Claude sean más precisos al generar módulos,
 
 ## Instalación
 
-### Con skills-cli
+### Con Skills CLI
 
 ```bash
-skills-cli install --repo https://github.com/tu-usuario/mis-skills --skills mariadb-schema
+npx skills add . --skill mariadb-schema
+
+# Cuando el repo ya sea publico
+npx skills add chenux/agent-skills --skill mariadb-schema
 ```
+
+Si GitHub responde `404` para el ZIP del branch `main`, el repo todavia no esta accesible publicamente y debes instalarlo desde una ruta local.
 
 ### Manual
 
@@ -36,7 +41,7 @@ cp -r mariadb-schema/ .claude/skills/
 
 ---
 
-## Configuración
+## Configuracion
 
 Crea el archivo `.env.skill.mariadb` en el directorio del proyecto donde vayas a trabajar (el directorio actual desde donde ejecutas Claude Code):
 
@@ -116,7 +121,7 @@ Una vez instalada la skill y creado el `.env.skill.mariadb`, simplemente describ
 - *"Muestra todas las foreign keys del esquema"*
 - *"Quiero crear un módulo CRUD para `productos`, ¿cómo está definida esa tabla?"*
 
-Claude detectará automáticamente la skill y ejecutará las queries necesarias.
+Claude detectara automaticamente la skill y ejecutara las queries necesarias.
 
 ---
 

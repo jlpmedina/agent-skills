@@ -38,13 +38,23 @@ DB_NAME=mi_base_de_datos
 Carga las variables con el script helper:
 
 ```bash
-python3 /home/claude/mariadb-schema/scripts/load_env.py /ruta/al/.env.skill.mariadb
+SKILL_DIR="$(find \
+  ./.claude/skills \
+  ./.github/skills \
+  "$HOME/.claude/skills" \
+  "$HOME/.copilot/skills" \
+  "$HOME/.agents/skills" \
+  -maxdepth 2 -type d -name mariadb-schema 2>/dev/null | head -1)"
+
+python3 "$SKILL_DIR/scripts/load_env.py"
 ```
 
 O manualmente en bash:
 ```bash
 export $(grep -v '^#' .env.skill.mariadb | xargs)
 ```
+
+Si necesitas revisar el comportamiento exacto del helper, consulta [load_env.py](./scripts/load_env.py).
 
 ---
 
@@ -53,8 +63,18 @@ export $(grep -v '^#' .env.skill.mariadb | xargs)
 Usa siempre el script `query.sh` para garantizar modo lectura. **NUNCA ejecutes INSERT, UPDATE, DELETE, DROP, ALTER ni DDL.**
 
 ```bash
-bash /home/claude/mariadb-schema/scripts/query.sh "$DB_HOST" "$DB_PORT" "$DB_USER" "$DB_PASSWORD" "$DB_NAME" "SQL_AQUI"
+SKILL_DIR="$(find \
+  ./.claude/skills \
+  ./.github/skills \
+  "$HOME/.claude/skills" \
+  "$HOME/.copilot/skills" \
+  "$HOME/.agents/skills" \
+  -maxdepth 2 -type d -name mariadb-schema 2>/dev/null | head -1)"
+
+bash "$SKILL_DIR/scripts/query.sh" "$DB_HOST" "$DB_PORT" "$DB_USER" "$DB_PASSWORD" "$DB_NAME" "SQL_AQUI"
 ```
+
+Si el skill esta instalado en otra ubicacion compatible, el bloque anterior buscara primero en el proyecto y luego en rutas globales comunes. Para inspeccionar o reproducir la logica, consulta [query.sh](./scripts/query.sh).
 
 ---
 
