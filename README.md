@@ -91,9 +91,6 @@ CREATE USER 'skill_readonly'@'%' IDENTIFIED BY 'una_password_segura';
 -- Otorgar solo permisos de SELECT
 GRANT SELECT ON tu_base_de_datos.* TO 'skill_readonly'@'%';
 
--- Si necesitas acceso a information_schema (generalmente automatico)
-GRANT SELECT ON information_schema.* TO 'skill_readonly'@'%';
-
 -- Aplicar cambios
 FLUSH PRIVILEGES;
 ```
